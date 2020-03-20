@@ -68,6 +68,17 @@ static PlayData m_playerData;               // プレイヤーデータ
 static int m_changeHandCount;               // 手札の交換回数
 
 
+// プレイデータ用のカードの役を計算
+BOOL calcPokerHandForPlayData(PlayData* const playDataP)
+{
+    if (!playDataP)
+    {
+        return FALSE;
+    }
+
+    return calcPokerHand(playDataP->cards, playDataP->cardCount, &playDataP->hand);
+}
+
 // 初期化
 BOOL initialize()
 {
@@ -101,12 +112,42 @@ BOOL initialize()
     m_playerData.cardCount = PLAYER_MAX_CARD_CNT;
 
     // 現在の役を計算しておく
-    CHK(calcPokerHand(m_playerData.cards, m_playerData.cardCount, &m_playerData.hand));
+    CHK(calcPokerHandForPlayData(&m_playerData));
+
+    // 交換可能回数を設定
+    m_changeHandCount = MAX_CHANGE_HAND_CNT;
 
     // プレイヤーフェイズから開始
     m_gamePhase = eGamePhasePlayer;
 
     return TRUE;
+}
+
+const char* const getCardTypeName(eCardType type)
+{
+    typedef struct {
+        eCardType type;
+        const char* const name;
+    } CardTypeInfo;
+    const CardTypeInfo cardTypeInfoList[] = {
+        {.type = eCardTypeSpade,        .name = "S"},
+        {.type = eCardTypeClover,       .name = "C"},
+        {.type = eCardTypeHeart,        .name = "H"},
+        {.type = eCardTypeDiamond,      .name = "D"},
+        {.type = eCardTypeNil,          .name = "unknow"},
+    };
+    const CardTypeInfo* typeP = &cardTypeInfoList[0];
+
+    while (typeP->type != eCardTypeNil)
+    {
+        if (typeP->type == type)
+        {
+            break;
+        }
+        typeP++;
+    }
+
+    return typeP->name;
 }
 
 const char* const getPokerHandName(ePokerHand hand)
@@ -153,7 +194,7 @@ void printPlayData()
         PRINT("[hand:%s]", getPokerHandName(playDataP->hand));
         for (i = 0; i < playDataP->cardCount; ++i)
         {
-            PRINT("[%d:%2d]", i, playDataP->cards[i].number);
+            PRINT("[No.%d: %s%d]", i, getCardTypeName(playDataP->cards[i].type), playDataP->cards[i].number);
         }
         PRINT("\n");
     }
@@ -163,48 +204,50 @@ void printPlayData()
 // プレイヤーフェイズ
 static eGamePhase phasePlayer()
 {
-    //char drawSelectBuf[8];
-    //char drawSelect;
-    eGamePhase phase = eGamePhaseResult;//eGamePhasePlayer;
+    int i;
+    char* changeSelect;
+    char changeSelectBuf[8] = "\0";
+    eGamePhase phase = eGamePhasePlayer;
 
     LOG("--- phase player\n");
     printPlayData();
 
-    //if ((BLACKJACK_VALUE == m_playerData.totalValue) ||
-    //    (BLACKJACK_VALUE == m_dealerData.totalValue))
-    //{
-    //    // 既に終了しているのでリザルトフェイズへ
-    //    phase = eGamePhaseResult;
-    //}
-    //else
-    //{
-    //    PRINT("> カードを引きますか？ (y/n) : ");
-    //    scanf_s("%s", drawSelectBuf, (unsigned int)sizeof(drawSelectBuf));
+    if (0 < m_changeHandCount)
+    {
+        PRINT("> 交換しない場合は %s を入力してください\n", "N");
+        PRINT("> 交換するカード番号を選んでください (例：023) : ");
+        scanf_s("%s", changeSelectBuf, (unsigned int)sizeof(changeSelectBuf));
+        if (changeSelectBuf[0] == 'N' || changeSelectBuf[0] == 'n')
+        {
+            m_changeHandCount = 0;
+        }
+        else
+        {
+            // カード交換
+            changeSelect = changeSelectBuf;
+            while (*changeSelect != '\0')
+            {
+                i = changeSelect[0] - '0';
+                if (0 <= i && i < PLAYER_MAX_CARD_CNT)
+                {
+                    CHK(drawDeck(&m_deck, &m_playerData.cards[i]));
+                    CHK(calcPokerHandForPlayData(&m_playerData));
+                }
+                else
+                {
+                    PRINT("入力された値が不正です [%s]\n", changeSelectBuf);
+                    break;
+                }
+                changeSelect++;
+            }
 
-    //    drawSelect = drawSelectBuf[0];
-    //    if (drawSelect == 'y' || drawSelect == 'Y')
-    //    {
-    //        // カードを引く
-    //        CHK(getCard(m_deckCards, m_deckCardCount--, &m_playerData.cards[m_playerData.cardCount]));
-    //        m_playerData.cardCount++;
-    //        CHK(calcTotalValue(m_playerData.cards, m_playerData.cardCount, &m_playerData.totalValue));
-
-    //        if (BLACKJACK_VALUE <= m_playerData.totalValue)
-    //        {
-    //            // 21以上ならディーラーフェイズへ
-    //            phase = eGamePhaseDealer;
-    //        }
-    //    }
-    //    else if (drawSelect == 'n' || drawSelect == 'N')
-    //    {
-    //        // ディーラーフェイズへ
-    //        phase = eGamePhaseDealer;
-    //    }
-    //    else
-    //    {
-    //        PRINT("入力が不正です。再度入力し直してください。\n");
-    //    }
-    //}
+            m_changeHandCount--;
+        }
+    }
+    else
+    {
+        phase = eGamePhaseResult;
+    }
 
     return phase;
 }
@@ -215,30 +258,6 @@ static eGamePhase phaseResult()
     LOG("--- phase result\n");
     printPlayData();
 
-    //if (m_playerData.totalValue == m_dealerData.totalValue)
-    //{
-    //    PRINT("△引き分けです\n");
-    //}
-    //else if (BLACKJACK_VALUE < m_dealerData.totalValue)
-    //{
-    //    PRINT("〇プレイヤーの勝利です\n");
-    //}
-    //else if (BLACKJACK_VALUE < m_playerData.totalValue)
-    //{
-    //    PRINT("×プレイヤーの敗北です\n");
-    //}
-    //else if (m_dealerData.totalValue < m_playerData.totalValue)
-    //{
-    //    PRINT("〇プレイヤーの勝利です\n");
-    //}
-    //else if (m_playerData.totalValue < m_dealerData.totalValue)
-    //{
-    //    PRINT("×プレイヤーの敗北です\n");
-    //}
-    //else
-    //{
-    //    assert(FALSE && "想定していない結果判定です");
-    //}
     PRINT("\n\n");
 
     return eGamePhaseEnd;
