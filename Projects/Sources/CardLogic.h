@@ -28,12 +28,12 @@ typedef struct {        // デッキデータ
 //
 // Functions
 //
-BOOL initDeck(DeckData* const deckDataP, const int maxCardNumber, const int maxCardType);
+BOOL initDeck(DeckData* const deckDataP, int maxCardNumber, int maxCardType);
 BOOL drawDeck(DeckData* const deckDataP, Card* const cardP);
-BOOL shuffleCard(Card* const cardsP, const int maxCardCount);
-BOOL getCard(Card* const cardsP, const int maxCardCount, Card* const outputCardP);
-BOOL sortCards(Card* const cardsP, const int maxCardCount, SortOrder sortOrder);
-BOOL calcPokerHand(Card* const cardsP, const int maxCardCount, ePokerHand* const outputHandP);
+BOOL shuffleCard(Card* const cardsP, int maxCardCount);
+BOOL getCard(Card* const cardsP, int maxCardCount, Card* const outputCardP);
+BOOL sortCards(Card* const cardsP, int maxCardCount, SortOrder sortOrder);
+BOOL calcPokerHand(Card* const cardsP, int maxCardCount, ePokerHand* const outputHandP);
 
 
 #endif  // __CARD_LOGIC_H__

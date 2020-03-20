@@ -123,6 +123,7 @@ BOOL initialize()
     return TRUE;
 }
 
+// カートタイプ名を取得
 const char* const getCardTypeName(eCardType type)
 {
     typedef struct {
@@ -150,6 +151,7 @@ const char* const getCardTypeName(eCardType type)
     return typeP->name;
 }
 
+// ポーカーの役名を取得
 const char* const getPokerHandName(ePokerHand hand)
 {
     typedef struct {
@@ -196,7 +198,7 @@ void printPlayData()
         {
             PRINT("[No.%d: %s%d]", i, getCardTypeName(playDataP->cards[i].type), playDataP->cards[i].number);
         }
-        PRINT("\n");
+        PRINT("[%s]\n", getPokerHandName(playDataP->hand));
     }
     PRINT("\n");
 }

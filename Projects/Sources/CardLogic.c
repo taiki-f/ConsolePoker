@@ -4,7 +4,7 @@
 
 
 // デッキの初期化
-BOOL initDeck(DeckData* const deckDataP, const int maxCardNumber, const int maxCardType)
+BOOL initDeck(DeckData* const deckDataP, int maxCardNumber, int maxCardType)
 {
     int i;
     Card* cardP;
@@ -32,7 +32,7 @@ BOOL drawDeck(DeckData* const deckDataP, Card* const cardP)
 }
 
 // カードをシャッフル
-BOOL shuffleCard(Card* const cardsP, const int maxCardCount)
+BOOL shuffleCard(Card* const cardsP, int maxCardCount)
 {
     int i, cardNum;
     Card card;
@@ -54,7 +54,7 @@ BOOL shuffleCard(Card* const cardsP, const int maxCardCount)
 }
 
 // カードを1枚引く
-BOOL getCard(Card* const cardsP, const int maxCardCount, Card* const outputCardP)
+BOOL getCard(Card* const cardsP, int maxCardCount, Card* const outputCardP)
 {
     Card* cardP;
 
@@ -73,17 +73,18 @@ BOOL getCard(Card* const cardsP, const int maxCardCount, Card* const outputCardP
     return TRUE;
 }
 
+// 大小の判定
 static BOOL isSortLess(int src, int dst)
 {
     return (src < dst) ? TRUE : FALSE;
 }
-
 static BOOL isSortGreater(int src, int dst)
 {
     return (dst < src) ? TRUE : FALSE;
 }
 
-BOOL sortCards(Card* const cardsP, const int maxCardCount, SortOrder sortOrder)
+// カードをソート
+BOOL sortCards(Card* const cardsP, int maxCardCount, SortOrder sortOrder)
 {
     int base, i;
     Card card;
@@ -114,15 +115,14 @@ BOOL sortCards(Card* const cardsP, const int maxCardCount, SortOrder sortOrder)
 }
 
 // カードの役を計算
-BOOL calcPokerHand(Card* const cardsP, const int maxCardCount, ePokerHand* const outputHandP)
+BOOL calcPokerHand(Card* const cardsP, int maxCardCount, ePokerHand* const outputHandP)
 {
-    int aceCount = 0, totalValue = 0;
-
     if (!cardsP || !outputHandP || maxCardCount <= 0)
     {
         return FALSE;
     }
 
+    // ソート
     if (!sortCards(cardsP, maxCardCount, isSortLess))
     {
         return FALSE;
