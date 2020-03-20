@@ -17,6 +17,7 @@ typedef BOOL(*SortOrder)(int, int);     // ソートオーダー
 typedef struct {        // カード
     eCardType type;
     int number;
+    int priority;
 } Card;
 
 typedef struct {        // デッキデータ

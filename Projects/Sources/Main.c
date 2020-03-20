@@ -27,7 +27,13 @@ typedef enum {          // ゲームフェイズ
     eGamePhaseEnd,
     eGamePhasePlayer,           // プレイヤーフェイズ
     eGamePhaseResult,           // リザルトフェイズ
+    eGamePhaseTest,             // テストフェーズ
 } eGamePhase;
+#if defined(_DEBUG)
+#   define FIRST_PHASE  eGamePhasePlayer    //eGamePhaseTest
+#else
+#   define FIRST_PHASE  eGamePhasePlayer
+#endif
 
 
 //
@@ -51,14 +57,16 @@ typedef struct {        // フェイズ情報
 //
 static eGamePhase phasePlayer();
 static eGamePhase phaseResult();
+static eGamePhase phaseTest();
 
 
 //
 // Works
 //
 static const PhaseInfo PHASE_INFO[] = {     // フェイズ情報
-    {eGamePhasePlayer, phasePlayer},
-    {eGamePhaseResult, phaseResult},
+    {eGamePhasePlayer,  phasePlayer},
+    {eGamePhaseResult,  phaseResult},
+    {eGamePhaseTest,    phaseTest},
     {eGamePhaseEnd, NULL},  // 終端判定
 };
 static eGamePhase m_gamePhase;              // ゲームフェイズ
@@ -86,6 +94,7 @@ BOOL initialize()
     const Card initCard = {
         .type = eCardTypeNil,
         .number = 0,
+        .priority = 0,
     };
 
     LOG("--- initialize\n");
@@ -117,8 +126,8 @@ BOOL initialize()
     // 交換可能回数を設定
     m_changeHandCount = MAX_CHANGE_HAND_CNT;
 
-    // プレイヤーフェイズから開始
-    m_gamePhase = eGamePhasePlayer;
+    // 初期フェイズを設定
+    m_gamePhase = FIRST_PHASE;
 
     return TRUE;
 }
@@ -185,20 +194,18 @@ const char* const getPokerHandName(ePokerHand hand)
 }
 
 // プレイデータを表示
-void printPlayData()
+void printPlayData(const PlayData* const playDataP, const char* const playerNameP)
 {
     int i;
-    const PlayData* playDataP;
 
     {
-        PRINT("■プレイヤー ");
-        playDataP = &m_playerData;
+        PRINT("%s ", playerNameP);
         PRINT("[hand:%s]", getPokerHandName(playDataP->hand));
         for (i = 0; i < playDataP->cardCount; ++i)
         {
             PRINT("[No.%d: %s%d]", i, getCardTypeName(playDataP->cards[i].type), playDataP->cards[i].number);
         }
-        PRINT("[%s]\n", getPokerHandName(playDataP->hand));
+        PRINT("\n");
     }
     PRINT("\n");
 }
@@ -212,10 +219,11 @@ static eGamePhase phasePlayer()
     eGamePhase phase = eGamePhasePlayer;
 
     LOG("--- phase player\n");
-    printPlayData();
+    printPlayData(&m_playerData, "■プレイヤー");
 
     if (0 < m_changeHandCount)
     {
+        PRINT("> %d回まで交換可能(%d回目)\n", MAX_CHANGE_HAND_CNT, (MAX_CHANGE_HAND_CNT - m_changeHandCount + 1));
         PRINT("> 交換しない場合は %s を入力してください\n", "N");
         PRINT("> 交換するカード番号を選んでください (例：023) : ");
         scanf_s("%s", changeSelectBuf, (unsigned int)sizeof(changeSelectBuf));
@@ -233,7 +241,6 @@ static eGamePhase phasePlayer()
                 if (0 <= i && i < PLAYER_MAX_CARD_CNT)
                 {
                     CHK(drawDeck(&m_deck, &m_playerData.cards[i]));
-                    CHK(calcPokerHandForPlayData(&m_playerData));
                 }
                 else
                 {
@@ -242,6 +249,7 @@ static eGamePhase phasePlayer()
                 }
                 changeSelect++;
             }
+            CHK(calcPokerHandForPlayData(&m_playerData));
 
             m_changeHandCount--;
         }
@@ -258,8 +266,7 @@ static eGamePhase phasePlayer()
 static eGamePhase phaseResult()
 {
     LOG("--- phase result\n");
-    printPlayData();
-
+    printPlayData(&m_playerData, "■結果発表");
     PRINT("\n\n");
 
     return eGamePhaseEnd;
@@ -331,6 +338,209 @@ int main()
     }
 
     return 0;
+}
+
+// テストフェイズ
+static eGamePhase phaseTest()
+{
+    PlayData testData;
+    testData.cardCount = 5;
+
+    LOG("--- phase test\n");
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeSpade;
+        testData.cards[3].number = 4;
+        testData.cards[3].priority = 4;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 1;
+        testData.cards[4].priority = 14;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ワンペア");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeHeart;
+        testData.cards[3].number = 2;
+        testData.cards[3].priority = 2;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 1;
+        testData.cards[4].priority = 14;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ツーペア");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeClover;
+        testData.cards[3].number = 1;
+        testData.cards[3].priority = 14;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 1;
+        testData.cards[4].priority = 14;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■スリーカード");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeDiamond;
+        testData.cards[2].number = 1;
+        testData.cards[2].priority = 14;
+        testData.cards[3].type = eCardTypeClover;
+        testData.cards[3].number = 1;
+        testData.cards[3].priority = 14;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 1;
+        testData.cards[4].priority = 14;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■フォーカード");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 6;
+        testData.cards[0].priority = 6;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeDiamond;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeClover;
+        testData.cards[3].number = 4;
+        testData.cards[3].priority = 4;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 5;
+        testData.cards[4].priority = 5;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ストレート");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeSpade;
+        testData.cards[3].number = 4;
+        testData.cards[3].priority = 4;
+        testData.cards[4].type = eCardTypeSpade;
+        testData.cards[4].number = 5;
+        testData.cards[4].priority = 5;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■フラッシュ");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeHeart;
+        testData.cards[1].number = 1;
+        testData.cards[1].priority = 14;
+        testData.cards[2].type = eCardTypeClover;
+        testData.cards[2].number = 1;
+        testData.cards[2].priority = 14;
+        testData.cards[3].type = eCardTypeSpade;
+        testData.cards[3].number = 4;
+        testData.cards[3].priority = 4;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 4;
+        testData.cards[4].priority = 4;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■フルハウス");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 2;
+        testData.cards[0].priority = 2;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 3;
+        testData.cards[1].priority = 3;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 4;
+        testData.cards[2].priority = 4;
+        testData.cards[3].type = eCardTypeSpade;
+        testData.cards[3].number = 5;
+        testData.cards[3].priority = 5;
+        testData.cards[4].type = eCardTypeSpade;
+        testData.cards[4].number = 6;
+        testData.cards[4].priority = 6;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ストレートフラッシュ");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 10;
+        testData.cards[0].priority = 10;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 11;
+        testData.cards[1].priority = 11;
+        testData.cards[2].type = eCardTypeSpade;
+        testData.cards[2].number = 12;
+        testData.cards[2].priority = 12;
+        testData.cards[3].type = eCardTypeSpade;
+        testData.cards[3].number = 13;
+        testData.cards[3].priority = 13;
+        testData.cards[4].type = eCardTypeSpade;
+        testData.cards[4].number = 1;
+        testData.cards[4].priority = 14;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ロイヤルストレートフラッシュ");
+    }
+    {
+        testData.cards[0].type = eCardTypeSpade;
+        testData.cards[0].number = 1;
+        testData.cards[0].priority = 14;
+        testData.cards[1].type = eCardTypeSpade;
+        testData.cards[1].number = 2;
+        testData.cards[1].priority = 2;
+        testData.cards[2].type = eCardTypeDiamond;
+        testData.cards[2].number = 3;
+        testData.cards[2].priority = 3;
+        testData.cards[3].type = eCardTypeClover;
+        testData.cards[3].number = 4;
+        testData.cards[3].priority = 4;
+        testData.cards[4].type = eCardTypeHeart;
+        testData.cards[4].number = 5;
+        testData.cards[4].priority = 5;
+        CHK(calcPokerHandForPlayData(&testData));
+        printPlayData(&testData, "■ストレートもどき");
+    }
+
+    PRINT("\n\n");
+
+    return eGamePhaseEnd;
 }
 
 // プログラムの実行: Ctrl + F5 または [デバッグ] > [デバッグなしで開始] メニュー
