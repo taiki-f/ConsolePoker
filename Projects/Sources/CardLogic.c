@@ -73,12 +73,57 @@ BOOL getCard(Card* const cardsP, const int maxCardCount, Card* const outputCardP
     return TRUE;
 }
 
+static BOOL isSortLess(int src, int dst)
+{
+    return (src < dst) ? TRUE : FALSE;
+}
+
+static BOOL isSortGreater(int src, int dst)
+{
+    return (dst < src) ? TRUE : FALSE;
+}
+
+BOOL sortCards(Card* const cardsP, const int maxCardCount, SortOrder sortOrder)
+{
+    int base, i;
+    Card card;
+
+    if (!cardsP || maxCardCount == 0)
+    {
+        return FALSE;
+    }
+
+    for (base = 1; base < maxCardCount; ++base)
+    {
+        for (i = base; 0 < i; --i)
+        {
+            if (sortOrder(cardsP[i].number, cardsP[i - 1].number))
+            {
+                card = cardsP[i - 1];
+                cardsP[i - 1] = cardsP[i];
+                cardsP[i] = card;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return TRUE;
+}
+
 // カードの役を計算
 BOOL calcPokerHand(Card* const cardsP, const int maxCardCount, ePokerHand* const outputHandP)
 {
     int aceCount = 0, totalValue = 0;
 
     if (!cardsP || !outputHandP || maxCardCount <= 0)
+    {
+        return FALSE;
+    }
+
+    if (!sortCards(cardsP, maxCardCount, isSortLess))
     {
         return FALSE;
     }

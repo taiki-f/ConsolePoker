@@ -6,6 +6,12 @@
 
 
 //
+// Defines
+//
+typedef BOOL(*SortOrder)(int, int);     // ソートオーダー
+
+
+//
 // Structs
 //
 typedef struct {        // カード
@@ -19,7 +25,6 @@ typedef struct {        // デッキデータ
 } DeckData;
 
 
-
 //
 // Functions
 //
@@ -27,6 +32,8 @@ BOOL initDeck(DeckData* const deckDataP, const int maxCardNumber, const int maxC
 BOOL drawDeck(DeckData* const deckDataP, Card* const cardP);
 BOOL shuffleCard(Card* const cardsP, const int maxCardCount);
 BOOL getCard(Card* const cardsP, const int maxCardCount, Card* const outputCardP);
+BOOL sortCards(Card* const cardsP, const int maxCardCount, SortOrder sortOrder);
 BOOL calcPokerHand(Card* const cardsP, const int maxCardCount, ePokerHand* const outputHandP);
+
 
 #endif  // __CARD_LOGIC_H__
